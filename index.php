@@ -6,7 +6,7 @@
 
     <body>
         <?php
-            echo "Hello, World! 2";
+            echo "Hello, World! 2 update";
         ?>
     </body>
 </html>
