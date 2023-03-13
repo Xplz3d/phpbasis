@@ -10,3 +10,4 @@
         ?>
     </body>
 </html>
+<?php phpinfo(); ?>
