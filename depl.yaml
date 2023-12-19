@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: interinvestapi-deployment
   labels:
     app: interinvestapi-deployment
-  name: interinvestapi-deployment
 spec:
   replicas: 1
   selector:
@@ -15,42 +15,54 @@ spec:
         app: interinvestapi
     spec:
       containers:
-      - env:
-        - name: APP_ENV
-          value: dev
-        - name: TZ
-          value: Europe/Paris
-        image: nginx#interinvestcontainersregistry.azurecr.io/interinvest/api:20854
-        name: nginx
+      - name: nginx
+        image: nginx #interinvestcontainersregistry.azurecr.io/interinvest/api:20854
         ports:
         - containerPort: 80
+        env:
+        - name: APP_ENV
+          value: "dev"
+        - name: TZ
+          value: "Europe/Paris"
 ---
 apiVersion: v1
 kind: Service
 metadata:
+  name: interinvestapi-service
+  #annotations:
+    #service.beta.kubernetes.io/azure-load-balancer-internal: "true"
   labels:
     app: interinvestapi
-  name: interinvestapi-service
 spec:
-  ports:
-  - port: 80
+  type: ClusterIP
   selector:
     app: interinvestapi
+  ports:
+  - port: 80
 ---
+---
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: interinvestapi-ingress
+
+  
+  
 spec:
   ingressClassName: nginx
+  # tls:
+  # - hosts:
+  #   - samplepoc-app.com
+  #   secretName: nginx-cert3
   rules:
-  - host: api.inter-invest.local
+  - host: "hello.inter-invest.com"
     http:
       paths:
-      - backend:
-          service:
-            name: interinvestapi-service
-            port:
-              number: 80
-        path: /
-        pathType: Prefix
+        - pathType: Prefix
+          path: "/"
+          backend:
+            service:
+              name: interinvestapi-service
+              port:
+                number: 80
