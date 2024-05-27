@@ -63,3 +63,4 @@ for DB in "${!DATABASES[@]}"; do
 
     echo "Database dump for ${DB} completed successfully and saved to $DUMP_FILE_NAME"
 done
+az vm deallocate -g rg-hub-test -n sqldump
