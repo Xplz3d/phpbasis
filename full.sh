@@ -6,8 +6,8 @@ KEY_VAULT_NAME="kvsqldump"  # Replace with your Key Vault name
 # Define an array of database configurations
 declare -A DATABASES
 DATABASES=(
-    ["db1"]="hostname1 username1 secretname1"
-    ["db2"]="hostname2 username2 secretname2"
+    ["db1"]="hostname1 mysqluser mysqlpwd"
+    ["db2"]="hostname2 username_secretname2 password_secretname2"
     # Add more databases as needed
 )
 
@@ -24,24 +24,36 @@ fi
 for DB in "${!DATABASES[@]}"; do
     IFS=' ' read -r -a CONFIG <<< "${DATABASES[$DB]}"
     HOSTNAME="${CONFIG[0]}"
-    USERNAME="${CONFIG[1]}"
-    SECRET_NAME="${CONFIG[2]}"
+    USERNAME_SECRET_NAME="${CONFIG[1]}"
+    PASSWORD_SECRET_NAME="${CONFIG[2]}"
 
-    # Accessing the secret from Key Vault
-    SECRET_VALUE=$(curl -s -H "Authorization: Bearer ${ACCESS_TOKEN}" "https://${KEY_VAULT_NAME}.vault.azure.net/secrets/${SECRET_NAME}?api-version=7.3" | jq -r '.value')
+    # Accessing the username secret from Key Vault
+    USERNAME=$(curl -s -H "Authorization: Bearer ${ACCESS_TOKEN}" "https://${KEY_VAULT_NAME}.vault.azure.net/secrets/${USERNAME_SECRET_NAME}?api-version=7.3" | jq -r '.value')
 
-    # Check if the secret retrieval was successful
-    if [ -z "$SECRET_VALUE" ]; then
-        echo "Failed to get secret value for ${DB} from Key Vault"
+    # Check if the username retrieval was successful
+    if [ -z "$USERNAME" ]; then
+        echo "Failed to get username for ${DB} from Key Vault"
         continue
     fi
 
-    # Output the secret value (for demonstration purposes, remove or secure this in production)
-    echo "The value of the secret '${SECRET_NAME}' for database '${DB}' is retrieved successfully."
+    # Accessing the password secret from Key Vault
+    PASSWORD=$(curl -s -H "Authorization: Bearer ${ACCESS_TOKEN}" "https://${KEY_VAULT_NAME}.vault.azure.net/secrets/${PASSWORD_SECRET_NAME}?api-version=7.3" | jq -r '.value')
+
+    # Check if the password retrieval was successful
+    if [ -z "$PASSWORD" ]; then
+        echo "Failed to get password for ${DB} from Key Vault"
+        continue
+    fi
+
+    # Output the secret values (for demonstration purposes, remove or secure this in production)
+    echo "The username and password for database '${DB}' are retrieved successfully."
+
+    # Generate the dump file name with timestamp
+    TIMESTAMP=$(date -u '+%Y%m%d%H%M%S')
+    DUMP_FILE_NAME="/mnt/sqldumps/${DB}_database_dump_${TIMESTAMP}.sql"
 
     # Dump the MySQL database
-    DUMP_FILE_NAME="/mnt/sqldumps/${DB}_database_dump.sql"
-    mysqldump --host="$HOSTNAME" --user="$USERNAME" --password="$SECRET_VALUE" --databases "$DB" --no-tablespaces --set-gtid-purged=OFF --skip-lock-tables > "$DUMP_FILE_NAME"
+    mysqldump --host="$HOSTNAME" --user="$USERNAME" --password="$PASSWORD" --databases "$DB" --no-tablespaces --set-gtid-purged=OFF --skip-lock-tables > "$DUMP_FILE_NAME"
 
     # Check if the mysqldump was successful
     if [ $? -ne 0 ]; then
@@ -51,4 +63,3 @@ for DB in "${!DATABASES[@]}"; do
 
     echo "Database dump for ${DB} completed successfully and saved to $DUMP_FILE_NAME"
 done
-
